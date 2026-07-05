@@ -5,32 +5,45 @@ import plotly.figure_factory as ff
 import pandas as pd
 import joblib
 import os
-import random
 
 # ============================================
-# 1. CREAR CARPETAS Y DATOS
+# 1. DATOS EMBEBIDOS (CREADOS EN EL CÓDIGO)
 # ============================================
 
-os.makedirs('data', exist_ok=True)
-os.makedirs('models', exist_ok=True)
+print("📊 Creando datos de ejemplo...")
+
+# Crear datos de ejemplo (los mismos que usaste en el notebook)
+data = {
+    'id': list(range(100)),
+    'age': [50, 55, 51, 48, 47, 52, 60, 45, 58, 53, 
+            49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
+            50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+            49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
+            50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+            49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
+            50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+            49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
+            50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+            49, 56, 44, 61, 42, 57, 46, 59, 54, 43],
+    'gender': [2, 1, 1, 2, 1, 2, 1, 2, 1, 2] * 10,
+    'height': [168, 156, 165, 169, 156, 160, 170, 155, 175, 165] * 10,
+    'weight': [62, 85, 64, 82, 56, 70, 80, 55, 90, 65] * 10,
+    'ap_hi': [110, 140, 130, 150, 100, 120, 130, 110, 140, 120] * 10,
+    'ap_lo': [80, 90, 70, 100, 60, 80, 85, 70, 90, 80] * 10,
+    'cholesterol': [1, 3, 3, 1, 1, 2, 3, 1, 2, 1] * 10,
+    'gluc': [1, 1, 1, 1, 1, 2, 1, 1, 2, 1] * 10,
+    'smoke': [0, 0, 0, 0, 0, 1, 0, 0, 1, 0] * 10,
+    'alco': [0, 0, 0, 0, 0, 1, 0, 0, 0, 0] * 10,
+    'active': [1, 1, 0, 1, 0, 1, 0, 1, 1, 0] * 10,
+    'cardio': [0, 1, 1, 1, 0, 1, 0, 0, 1, 0] * 10
+}
+
+df = pd.DataFrame(data)
+
+print("✅ Datos de ejemplo creados correctamente")
 
 # ============================================
-# 2. CARGAR DATOS CARDIOVASCULARES
-# ============================================
-
-df = pd.read_csv('data/cardio_train.csv', sep=';')
-
-# Limpieza de datos (igual que en tu notebook)
-df['age'] = (df['age'] / 365.25).astype(int)
-df = df[(df['ap_hi'] > df['ap_lo']) & (df['ap_hi'] < 250) & (df['ap_hi'] > 60)]
-df = df[(df['ap_lo'] < 150) & (df['ap_lo'] > 40)]
-df = df[(df['height'] >= 100) & (df['height'] <= 200)]
-df = df[(df['weight'] >= 40) & (df['weight'] <= 200)]
-
-print("✅ Datos cargados correctamente")
-
-# ============================================
-# 3. CARGAR MODELOS (si existen)
+# 2. CARGAR MODELOS (si existen)
 # ============================================
 
 try:
@@ -41,7 +54,7 @@ except:
     print("⚠️ Modelo de clasificación NO encontrado")
 
 # ============================================
-# 4. CREAR GRÁFICAS
+# 3. CREAR GRÁFICAS
 # ============================================
 
 # FIGURA 1: Matriz de Correlación
@@ -103,7 +116,7 @@ fig_presion = px.scatter(
 )
 
 # ============================================
-# 5. DASHBOARD
+# 4. DASHBOARD
 # ============================================
 
 app = dash.Dash(__name__)
@@ -152,9 +165,8 @@ app.layout = html.Div([
                style={'textAlign': 'center', 'fontSize': '16px'})
     ]),
     
-    # Inputs en 3 columnas
+    # Inputs en 2 columnas (más compacto)
     html.Div([
-        # Columna 1
         html.Div([
             html.Div([
                 html.Label("Edad (años):", style={'fontWeight': 'bold'}),
@@ -172,17 +184,16 @@ app.layout = html.Div([
                 html.Label("Altura (cm):", style={'fontWeight': 'bold'}),
                 dcc.Input(id='input-altura', type='number', value=165, min=100, max=200,
                          style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'})
-        ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-        
-        # Columna 2
-        html.Div([
+            ], style={'margin': '10px'}),
+            
             html.Div([
                 html.Label("Peso (kg):", style={'fontWeight': 'bold'}),
                 dcc.Input(id='input-peso', type='number', value=70, min=40, max=200,
                          style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'}),
-            
+            ], style={'margin': '10px'})
+        ], style={'width': '45%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+        
+        html.Div([
             html.Div([
                 html.Label("Presión Sistólica (mmHg):", style={'fontWeight': 'bold'}),
                 dcc.Input(id='input-ap_hi', type='number', value=120, min=60, max=250,
@@ -193,11 +204,8 @@ app.layout = html.Div([
                 html.Label("Presión Diastólica (mmHg):", style={'fontWeight': 'bold'}),
                 dcc.Input(id='input-ap_lo', type='number', value=80, min=40, max=150,
                          style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'})
-        ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-        
-        # Columna 3
-        html.Div([
+            ], style={'margin': '10px'}),
+            
             html.Div([
                 html.Label("Colesterol (1=Normal, 2=Alto, 3=Muy Alto):", style={'fontWeight': 'bold'}),
                 dcc.Dropdown(
@@ -222,24 +230,25 @@ app.layout = html.Div([
                     ],
                     value=1
                 )
-            ], style={'margin': '10px'}),
-            
-            html.Div([
-                html.Label("Fuma (0=No, 1=Sí):", style={'fontWeight': 'bold'}),
-                dcc.Dropdown(
-                    id='input-fuma',
-                    options=[
-                        {'label': '0 - No fuma', 'value': 0},
-                        {'label': '1 - Fuma', 'value': 1}
-                    ],
-                    value=0
-                )
             ], style={'margin': '10px'})
-        ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top'})
+        ], style={'width': '45%', 'display': 'inline-block', 'verticalAlign': 'top'})
     ], style={'textAlign': 'center'}),
     
-    # Más inputs (fila adicional)
+    # Fila adicional para fuma, alcohol, activo
     html.Div([
+        html.Div([
+            html.Label("Fuma (0=No, 1=Sí):", style={'fontWeight': 'bold'}),
+            dcc.Dropdown(
+                id='input-fuma',
+                options=[
+                    {'label': '0 - No fuma', 'value': 0},
+                    {'label': '1 - Fuma', 'value': 1}
+                ],
+                value=0,
+                style={'width': '150px', 'display': 'inline-block'}
+            )
+        ], style={'display': 'inline-block', 'margin': '10px'}),
+        
         html.Div([
             html.Label("Alcohol (0=No, 1=Sí):", style={'fontWeight': 'bold'}),
             dcc.Dropdown(
@@ -249,7 +258,7 @@ app.layout = html.Div([
                     {'label': '1 - Consume', 'value': 1}
                 ],
                 value=0,
-                style={'width': '200px', 'display': 'inline-block'}
+                style={'width': '150px', 'display': 'inline-block'}
             )
         ], style={'display': 'inline-block', 'margin': '10px'}),
         
@@ -262,7 +271,7 @@ app.layout = html.Div([
                     {'label': '1 - Activo', 'value': 1}
                 ],
                 value=1,
-                style={'width': '200px', 'display': 'inline-block'}
+                style={'width': '150px', 'display': 'inline-block'}
             )
         ], style={'display': 'inline-block', 'margin': '10px'})
     ], style={'textAlign': 'center'}),
@@ -306,10 +315,10 @@ app.layout = html.Div([
         style={'textAlign': 'center', 'color': '#7f8c8d', 'padding': '20px'}
     )
     
-], style={'maxWidth': '1400px', 'margin': '0 auto', 'padding': '20px'})
+], style={'maxWidth': '1200px', 'margin': '0 auto', 'padding': '20px'})
 
 # ============================================
-# 6. CALLBACK - PREDICCIÓN
+# 5. CALLBACK - PREDICCIÓN
 # ============================================
 
 @app.callback(
@@ -388,7 +397,7 @@ def predecir(n_clicks, edad, genero, altura, peso, ap_hi, ap_lo,
         }
 
 # ============================================
-# 7. EJECUTAR
+# 6. EJECUTAR
 # ============================================
 
 if __name__ == '__main__':
