@@ -2,9 +2,9 @@ import dash
 from dash import dcc, html, Input, Output, State
 import plotly.express as px
 import plotly.figure_factory as ff
+import plotly.graph_objects as go
 import pandas as pd
 import joblib
-import os
 
 # ============================================
 # 1. DATOS EMBEBIDOS (CREADOS EN EL CÓDIGO)
@@ -12,10 +12,9 @@ import os
 
 print("📊 Creando datos de ejemplo...")
 
-# Crear datos de ejemplo (los mismos que usaste en el notebook)
 data = {
     'id': list(range(100)),
-    'age': [50, 55, 51, 48, 47, 52, 60, 45, 58, 53, 
+    'age': [50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
             49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
             50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
             49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
@@ -39,291 +38,367 @@ data = {
 }
 
 df = pd.DataFrame(data)
-
 print("✅ Datos de ejemplo creados correctamente")
 
 # ============================================
-# 2. CARGAR MODELOS (si existen)
+# 2. CARGAR MODELO (si existe)
 # ============================================
 
 try:
     modelo_clasificacion = joblib.load('models/clasificador_cardio.pkl')
     print("✅ Modelo de clasificación cargado")
-except:
+except Exception:
     modelo_clasificacion = None
     print("⚠️ Modelo de clasificación NO encontrado")
 
 # ============================================
-# 3. CREAR GRÁFICAS
+# 3. PALETA Y TEMA VISUAL
 # ============================================
 
-# FIGURA 1: Matriz de Correlación
-corr_matrix = df.select_dtypes(include=['number']).corr()
+COLORS = {
+    'bg': '#f4f6fa',
+    'card': '#ffffff',
+    'primary': '#3b5bdb',
+    'primary_dark': '#2c46b0',
+    'accent': '#0ca678',
+    'danger': '#e03131',
+    'text': '#212529',
+    'muted': '#6c757d',
+    'sano': '#12b886',
+    'riesgo': '#e03131',
+}
+
+PLOTLY_TEMPLATE = 'plotly_white'
+CARDIO_COLOR_MAP = {0: COLORS['sano'], 1: COLORS['riesgo']}
+
+CARD_STYLE = {
+    'backgroundColor': COLORS['card'],
+    'borderRadius': '16px',
+    'padding': '20px',
+    'margin': '14px',
+    'boxShadow': '0 4px 16px rgba(0,0,0,0.06)',
+}
+
+# ============================================
+# 4. GRÁFICAS DE ANÁLISIS EXPLORATORIO
+# ============================================
+
+corr_matrix = df.select_dtypes(include=['number']).drop(columns=['id']).corr()
 fig_correlacion = ff.create_annotated_heatmap(
     z=corr_matrix.values,
     x=list(corr_matrix.columns),
     y=list(corr_matrix.index),
     colorscale='RdBu',
+    zmid=0,
     showscale=True,
     annotation_text=corr_matrix.round(2).values
 )
 fig_correlacion.update_layout(
-    title='📊 Matriz de Correlación - Variables Cardiovasculares',
-    height=650,
-    font_size=10
+    title='Matriz de Correlación entre Variables',
+    height=600,
+    font=dict(size=11, family='Inter, sans-serif'),
+    margin=dict(l=40, r=40, t=60, b=40),
 )
 
-# FIGURA 2: Distribución de Edad
 fig_edad = px.histogram(
-    df, 
-    x='age', 
-    color='cardio',
-    barmode='overlay',
-    title='📈 Distribución de Edad por Estado Cardiovascular',
-    labels={'age': 'Edad (años)', 'count': 'Cantidad de Pacientes'},
-    color_discrete_map={0: '#2ecc71', 1: '#e74c3c'},
-    nbins=30
+    df, x='age', color='cardio', barmode='overlay',
+    title='Distribución de Edad por Estado Cardiovascular',
+    labels={'age': 'Edad (años)', 'count': 'Pacientes', 'cardio': 'Cardio'},
+    color_discrete_map=CARDIO_COLOR_MAP, nbins=25, template=PLOTLY_TEMPLATE,
 )
-fig_edad.update_layout(bargap=0.1)
+fig_edad.update_layout(bargap=0.1, font_family='Inter, sans-serif', legend_title_text='Riesgo')
 
-# FIGURA 3: Distribución de Peso
 fig_peso = px.histogram(
-    df, 
-    x='weight', 
-    color='cardio',
-    barmode='overlay',
-    title='📈 Distribución de Peso por Estado Cardiovascular',
-    labels={'weight': 'Peso (kg)', 'count': 'Cantidad de Pacientes'},
-    color_discrete_map={0: '#2ecc71', 1: '#e74c3c'},
-    nbins=30
+    df, x='weight', color='cardio', barmode='overlay',
+    title='Distribución de Peso por Estado Cardiovascular',
+    labels={'weight': 'Peso (kg)', 'count': 'Pacientes', 'cardio': 'Cardio'},
+    color_discrete_map=CARDIO_COLOR_MAP, nbins=25, template=PLOTLY_TEMPLATE,
 )
-fig_peso.update_layout(bargap=0.1)
+fig_peso.update_layout(bargap=0.1, font_family='Inter, sans-serif', legend_title_text='Riesgo')
 
-# FIGURA 4: Presión Sistólica vs Diastólica
 fig_presion = px.scatter(
-    df, 
-    x='ap_hi', 
-    y='ap_lo', 
-    color='cardio',
-    title='🫀 Relación entre Presión Sistólica y Diastólica',
-    labels={
-        'ap_hi': 'Presión Sistólica (mmHg)',
-        'ap_lo': 'Presión Diastólica (mmHg)'
-    },
-    color_discrete_map={0: '#2ecc71', 1: '#e74c3c'},
-    opacity=0.5,
-    hover_data=['age', 'weight']
+    df, x='ap_hi', y='ap_lo', color='cardio',
+    title='Presión Sistólica vs. Diastólica',
+    labels={'ap_hi': 'Presión Sistólica (mmHg)', 'ap_lo': 'Presión Diastólica (mmHg)', 'cardio': 'Cardio'},
+    color_discrete_map=CARDIO_COLOR_MAP, opacity=0.55, hover_data=['age', 'weight'],
+    template=PLOTLY_TEMPLATE,
 )
+fig_presion.update_layout(font_family='Inter, sans-serif', legend_title_text='Riesgo')
+
+for fig in (fig_edad, fig_peso, fig_presion):
+    fig.update_layout(title_font_size=16, title_x=0.02)
+
+
+def grafico_vacio(mensaje):
+    """Gauge/placeholder inicial antes de predecir."""
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=0,
+        number={'suffix': '%', 'font': {'size': 36, 'color': COLORS['muted']}},
+        gauge={
+            'axis': {'range': [0, 100], 'tickwidth': 1},
+            'bar': {'color': COLORS['muted']},
+            'steps': [
+                {'range': [0, 40], 'color': '#e6fcf5'},
+                {'range': [40, 70], 'color': '#fff9db'},
+                {'range': [70, 100], 'color': '#ffe3e3'},
+            ],
+        },
+        title={'text': mensaje, 'font': {'size': 14}}
+    ))
+    fig.update_layout(height=280, margin=dict(l=20, r=20, t=50, b=10), font_family='Inter, sans-serif')
+    return fig
+
+
+def grafico_gauge(probabilidad_pct, es_riesgo):
+    color_barra = COLORS['riesgo'] if es_riesgo else COLORS['sano']
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=probabilidad_pct,
+        number={'suffix': '%', 'font': {'size': 40, 'color': color_barra}},
+        gauge={
+            'axis': {'range': [0, 100], 'tickwidth': 1},
+            'bar': {'color': color_barra, 'thickness': 0.3},
+            'steps': [
+                {'range': [0, 40], 'color': '#e6fcf5'},
+                {'range': [40, 70], 'color': '#fff9db'},
+                {'range': [70, 100], 'color': '#ffe3e3'},
+            ],
+            'threshold': {
+                'line': {'color': color_barra, 'width': 4},
+                'thickness': 0.85,
+                'value': probabilidad_pct
+            }
+        },
+        title={'text': 'Probabilidad de Riesgo Cardiovascular', 'font': {'size': 15}}
+    ))
+    fig.update_layout(height=280, margin=dict(l=20, r=20, t=50, b=10), font_family='Inter, sans-serif')
+    return fig
+
 
 # ============================================
-# 4. DASHBOARD
+# 5. HELPERS DE UI
 # ============================================
 
-app = dash.Dash(__name__)
+def campo_slider(id_, etiqueta, min_, max_, valor, step=1, marks=None):
+    return html.Div([
+        html.Label(etiqueta, style={'fontWeight': 600, 'color': COLORS['text'], 'fontSize': '14px'}),
+        dcc.Slider(
+            id=id_, min=min_, max=max_, step=step, value=valor, marks=marks,
+            tooltip={'placement': 'bottom', 'always_visible': True}
+        ),
+    ], style={'margin': '18px 6px'})
+
+
+def campo_dropdown(id_, etiqueta, opciones, valor):
+    return html.Div([
+        html.Label(etiqueta, style={'fontWeight': 600, 'color': COLORS['text'], 'fontSize': '14px'}),
+        dcc.Dropdown(id=id_, options=opciones, value=valor, clearable=False, style={'marginTop': '6px'}),
+    ], style={'margin': '14px 6px'})
+
+
+def campo_toggle(id_, etiqueta, valor):
+    return html.Div([
+        html.Label(etiqueta, style={'fontWeight': 600, 'color': COLORS['text'], 'fontSize': '14px'}),
+        dcc.RadioItems(
+            id=id_,
+            options=[{'label': ' No', 'value': 0}, {'label': ' Sí', 'value': 1}],
+            value=valor, inline=True,
+            style={'marginTop': '8px'},
+            inputStyle={'marginRight': '6px', 'marginLeft': '14px'}
+        ),
+    ], style={'margin': '14px 6px'})
+
+
+# ============================================
+# 6. APP
+# ============================================
+
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[
+        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
+    ],
+)
+app.title = "Predictor Cardiovascular"
 server = app.server
 
-app.layout = html.Div([
-    
-    # TÍTULO
-    html.H1(
-        "📊 Análisis de Enfermedades Cardiovasculares",
-        style={'textAlign': 'center', 'color': '#2c3e50', 'padding': '20px', 'marginBottom': '30px'}
-    ),
-    
-    # FILA 1: Matriz de Correlación
-    html.Div([
-        dcc.Graph(figure=fig_correlacion)
-    ], style={'padding': '10px', 'margin': '20px', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}),
-    
-    # FILA 2: Histogramas (2 columnas)
-    html.Div([
-        html.Div([
-            dcc.Graph(figure=fig_edad)
-        ], style={'width': '48%', 'display': 'inline-block', 'padding': '10px'}),
-        
-        html.Div([
-            dcc.Graph(figure=fig_peso)
-        ], style={'width': '48%', 'display': 'inline-block', 'padding': '10px'}),
-    ], style={'display': 'flex', 'justifyContent': 'space-around'}),
-    
-    # FILA 3: Gráfico de Dispersión
-    html.Div([
-        dcc.Graph(figure=fig_presion)
-    ], style={'padding': '10px', 'margin': '20px', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}),
-    
-    # SEPARADOR
-    html.Hr(style={'margin': '40px 0'}),
-    
-    # CONTROLADOR DE PREDICCIÓN
-    html.H2(
-        "🔮 Predicción de Riesgo Cardiovascular",
-        style={'textAlign': 'center', 'color': '#2c3e50'}
-    ),
-    
-    html.Div([
-        html.P("Ingrese los datos del paciente para predecir su riesgo cardiovascular:", 
-               style={'textAlign': 'center', 'fontSize': '16px'})
-    ]),
-    
-    # Inputs en 2 columnas (más compacto)
-    html.Div([
-        html.Div([
-            html.Div([
-                html.Label("Edad (años):", style={'fontWeight': 'bold'}),
-                dcc.Input(id='input-edad', type='number', value=50, min=18, max=100, 
-                         style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'}),
-            
-            html.Div([
-                html.Label("Género (1=Mujer, 2=Hombre):", style={'fontWeight': 'bold'}),
-                dcc.Input(id='input-genero', type='number', value=1, min=1, max=2,
-                         style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'}),
-            
-            html.Div([
-                html.Label("Altura (cm):", style={'fontWeight': 'bold'}),
-                dcc.Input(id='input-altura', type='number', value=165, min=100, max=200,
-                         style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'}),
-            
-            html.Div([
-                html.Label("Peso (kg):", style={'fontWeight': 'bold'}),
-                dcc.Input(id='input-peso', type='number', value=70, min=40, max=200,
-                         style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'})
-        ], style={'width': '45%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-        
-        html.Div([
-            html.Div([
-                html.Label("Presión Sistólica (mmHg):", style={'fontWeight': 'bold'}),
-                dcc.Input(id='input-ap_hi', type='number', value=120, min=60, max=250,
-                         style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'}),
-            
-            html.Div([
-                html.Label("Presión Diastólica (mmHg):", style={'fontWeight': 'bold'}),
-                dcc.Input(id='input-ap_lo', type='number', value=80, min=40, max=150,
-                         style={'width': '100%', 'padding': '8px', 'margin': '5px 0'})
-            ], style={'margin': '10px'}),
-            
-            html.Div([
-                html.Label("Colesterol (1=Normal, 2=Alto, 3=Muy Alto):", style={'fontWeight': 'bold'}),
-                dcc.Dropdown(
-                    id='input-colesterol',
-                    options=[
-                        {'label': '1 - Normal', 'value': 1},
-                        {'label': '2 - Alto', 'value': 2},
-                        {'label': '3 - Muy Alto', 'value': 3}
-                    ],
-                    value=1
-                )
-            ], style={'margin': '10px'}),
-            
-            html.Div([
-                html.Label("Glucosa (1=Normal, 2=Alto, 3=Muy Alto):", style={'fontWeight': 'bold'}),
-                dcc.Dropdown(
-                    id='input-glucosa',
-                    options=[
-                        {'label': '1 - Normal', 'value': 1},
-                        {'label': '2 - Alto', 'value': 2},
-                        {'label': '3 - Muy Alto', 'value': 3}
-                    ],
-                    value=1
-                )
-            ], style={'margin': '10px'})
-        ], style={'width': '45%', 'display': 'inline-block', 'verticalAlign': 'top'})
-    ], style={'textAlign': 'center'}),
-    
-    # Fila adicional para fuma, alcohol, activo
-    html.Div([
-        html.Div([
-            html.Label("Fuma (0=No, 1=Sí):", style={'fontWeight': 'bold'}),
-            dcc.Dropdown(
-                id='input-fuma',
-                options=[
-                    {'label': '0 - No fuma', 'value': 0},
-                    {'label': '1 - Fuma', 'value': 1}
-                ],
-                value=0,
-                style={'width': '150px', 'display': 'inline-block'}
-            )
-        ], style={'display': 'inline-block', 'margin': '10px'}),
-        
-        html.Div([
-            html.Label("Alcohol (0=No, 1=Sí):", style={'fontWeight': 'bold'}),
-            dcc.Dropdown(
-                id='input-alcohol',
-                options=[
-                    {'label': '0 - No consume', 'value': 0},
-                    {'label': '1 - Consume', 'value': 1}
-                ],
-                value=0,
-                style={'width': '150px', 'display': 'inline-block'}
-            )
-        ], style={'display': 'inline-block', 'margin': '10px'}),
-        
-        html.Div([
-            html.Label("Actividad Física (0=No, 1=Sí):", style={'fontWeight': 'bold'}),
-            dcc.Dropdown(
-                id='input-activo',
-                options=[
-                    {'label': '0 - No activo', 'value': 0},
-                    {'label': '1 - Activo', 'value': 1}
-                ],
-                value=1,
-                style={'width': '150px', 'display': 'inline-block'}
-            )
-        ], style={'display': 'inline-block', 'margin': '10px'})
-    ], style={'textAlign': 'center'}),
-    
-    # Botón
-    html.Div([
-        html.Button(
-            '🔍 Predecir Riesgo Cardiovascular',
-            id='btn-predecir',
-            n_clicks=0,
-            style={
-                'padding': '15px 40px',
-                'fontSize': '18px',
-                'background': '#3498db',
-                'color': 'white',
-                'border': 'none',
-                'borderRadius': '8px',
-                'cursor': 'pointer',
-                'margin': '20px',
-                'fontWeight': 'bold'
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <style>
+            body { font-family: 'Inter', sans-serif; background-color: %s; margin: 0; }
+            ::-webkit-scrollbar { width: 8px; }
+            ::-webkit-scrollbar-thumb { background: #c1c9d6; border-radius: 8px; }
+            .tab-container .tab {
+                border: none !important;
+                font-weight: 600 !important;
+                color: %s !important;
             }
-        )
-    ], style={'textAlign': 'center'}),
-    
-    # Resultado
-    html.Div(
-        id='resultado-prediccion',
-        style={
-            'textAlign': 'center',
-            'fontSize': '20px',
-            'color': '#7f8c8d',
-            'padding': '20px'
-        },
-        children="Ingresa los datos y presiona 'Predecir Riesgo Cardiovascular'"
-    ),
-    
-    # Footer
-    html.Hr(),
+            .tab-container .tab--selected {
+                border-bottom: 3px solid %s !important;
+                color: %s !important;
+            }
+        </style>
+    </head>
+    <body>
+        {%%app_entry%%}
+        <footer>
+            {%%config%%}
+            {%%scripts%%}
+            {%%renderer%%}
+        </footer>
+    </body>
+</html>
+''' % (COLORS['bg'], COLORS['muted'], COLORS['primary'], COLORS['primary'])
+
+# ---------- HEADER ----------
+header = html.Div([
+    html.Div([
+        html.Span("🫀", style={'fontSize': '38px', 'marginRight': '14px'}),
+        html.Div([
+            html.H1("Predictor de Riesgo Cardiovascular",
+                    style={'margin': 0, 'color': 'white', 'fontSize': '28px', 'fontWeight': 800}),
+            html.P("Análisis exploratorio y predicción basada en datos clínicos",
+                   style={'margin': 0, 'color': 'rgba(255,255,255,0.85)', 'fontSize': '14px'}),
+        ])
+    ], style={'display': 'flex', 'alignItems': 'center'})
+], style={
+    'background': f"linear-gradient(120deg, {COLORS['primary']}, {COLORS['primary_dark']})",
+    'padding': '28px 36px',
+    'borderRadius': '0 0 24px 24px',
+    'boxShadow': '0 4px 20px rgba(59,91,219,0.25)',
+    'marginBottom': '10px',
+})
+
+# ---------- TAB: ANÁLISIS EXPLORATORIO ----------
+tab_analisis = html.Div([
+    html.Div([dcc.Graph(figure=fig_correlacion, config={'displayModeBar': False})], style=CARD_STYLE),
+    html.Div([
+        html.Div([dcc.Graph(figure=fig_edad, config={'displayModeBar': False})],
+                  style={**CARD_STYLE, 'flex': '1', 'minWidth': '320px'}),
+        html.Div([dcc.Graph(figure=fig_peso, config={'displayModeBar': False})],
+                  style={**CARD_STYLE, 'flex': '1', 'minWidth': '320px'}),
+    ], style={'display': 'flex', 'flexWrap': 'wrap'}),
+    html.Div([dcc.Graph(figure=fig_presion, config={'displayModeBar': False})], style=CARD_STYLE),
+], style={'padding': '10px'})
+
+# ---------- TAB: PREDICTOR ----------
+tab_predictor = html.Div([
+    html.Div([
+
+        # Columna izquierda: formulario
+        html.Div([
+            html.H3("Datos del Paciente", style={'color': COLORS['text'], 'marginTop': 0}),
+
+            html.Div([
+                html.Div([
+                    campo_slider('input-edad', 'Edad (años)', 18, 100, 50),
+                    campo_slider('input-altura', 'Altura (cm)', 130, 210, 165),
+                    campo_slider('input-peso', 'Peso (kg)', 35, 180, 70),
+                ], style={'flex': '1', 'minWidth': '260px'}),
+
+                html.Div([
+                    campo_slider('input-ap_hi', 'Presión Sistólica (mmHg)', 80, 220, 120),
+                    campo_slider('input-ap_lo', 'Presión Diastólica (mmHg)', 40, 150, 80),
+                    campo_dropdown('input-genero', 'Género', [
+                        {'label': 'Mujer', 'value': 1}, {'label': 'Hombre', 'value': 2}
+                    ], 1),
+                ], style={'flex': '1', 'minWidth': '260px'}),
+            ], style={'display': 'flex', 'gap': '20px', 'flexWrap': 'wrap'}),
+
+            html.Hr(style={'margin': '10px 0 20px', 'borderColor': '#eee'}),
+
+            html.Div([
+                campo_dropdown('input-colesterol', 'Colesterol', [
+                    {'label': 'Normal', 'value': 1}, {'label': 'Alto', 'value': 2}, {'label': 'Muy alto', 'value': 3}
+                ], 1),
+                campo_dropdown('input-glucosa', 'Glucosa', [
+                    {'label': 'Normal', 'value': 1}, {'label': 'Alto', 'value': 2}, {'label': 'Muy alto', 'value': 3}
+                ], 1),
+            ], style={'display': 'flex', 'gap': '20px', 'flexWrap': 'wrap'}),
+
+            html.Div([
+                campo_toggle('input-fuma', 'Fuma', 0),
+                campo_toggle('input-alcohol', 'Consume alcohol', 0),
+                campo_toggle('input-activo', 'Actividad física', 1),
+            ], style={'display': 'flex', 'gap': '20px', 'flexWrap': 'wrap', 'marginTop': '6px'}),
+
+            html.Div([
+                html.Button(
+                    '🔍  Predecir Riesgo',
+                    id='btn-predecir', n_clicks=0,
+                    style={
+                        'padding': '14px 36px', 'fontSize': '16px', 'fontWeight': 700,
+                        'background': COLORS['primary'], 'color': 'white', 'border': 'none',
+                        'borderRadius': '10px', 'cursor': 'pointer', 'marginTop': '24px',
+                        'boxShadow': '0 4px 14px rgba(59,91,219,0.35)', 'transition': 'transform 0.1s',
+                    }
+                ),
+            ], style={'textAlign': 'center'}),
+
+        ], style={**CARD_STYLE, 'flex': '1.3', 'minWidth': '380px'}),
+
+        # Columna derecha: resultado
+        html.Div([
+            html.H3("Resultado", style={'color': COLORS['text'], 'marginTop': 0}),
+            dcc.Loading(
+                id='loading-resultado',
+                type='circle',
+                color=COLORS['primary'],
+                children=[
+                    dcc.Graph(id='gauge-resultado', figure=grafico_vacio("Esperando datos"),
+                              config={'displayModeBar': False}),
+                    html.Div(
+                        id='resultado-texto',
+                        children="Completa los datos y presiona 'Predecir Riesgo'.",
+                        style={'textAlign': 'center', 'fontSize': '16px', 'color': COLORS['muted'],
+                               'padding': '10px 6px'}
+                    ),
+                ]
+            ),
+        ], style={**CARD_STYLE, 'flex': '1', 'minWidth': '320px'}),
+
+    ], style={'display': 'flex', 'gap': '10px', 'flexWrap': 'wrap', 'padding': '10px'}),
+])
+
+# ---------- LAYOUT PRINCIPAL ----------
+app.layout = html.Div([
+    header,
+
+    html.Div([
+        dcc.Tabs(id='tabs-principales', value='tab-predictor', className='tab-container', children=[
+            dcc.Tab(label='🔮 Predictor', value='tab-predictor'),
+            dcc.Tab(label='📊 Análisis Exploratorio', value='tab-analisis'),
+        ]),
+        html.Div(id='contenido-tabs'),
+    ], style={'maxWidth': '1200px', 'margin': '0 auto', 'padding': '0 16px'}),
+
     html.P(
-        "📊 Dashboard creado con Dash - Análisis de Enfermedades Cardiovasculares",
-        style={'textAlign': 'center', 'color': '#7f8c8d', 'padding': '20px'}
+        "Dashboard creado con Dash · Análisis y predicción de enfermedades cardiovasculares",
+        style={'textAlign': 'center', 'color': COLORS['muted'], 'padding': '30px', 'fontSize': '13px'}
     )
-    
-], style={'maxWidth': '1200px', 'margin': '0 auto', 'padding': '20px'})
+], style={'backgroundColor': COLORS['bg'], 'minHeight': '100vh', 'paddingBottom': '20px'})
+
 
 # ============================================
-# 5. CALLBACK - PREDICCIÓN
+# 7. CALLBACKS
 # ============================================
+
+@app.callback(Output('contenido-tabs', 'children'), Input('tabs-principales', 'value'))
+def render_tab(tab):
+    return tab_predictor if tab == 'tab-predictor' else tab_analisis
+
 
 @app.callback(
-    Output('resultado-prediccion', 'children'),
-    Output('resultado-prediccion', 'style'),
+    Output('gauge-resultado', 'figure'),
+    Output('resultado-texto', 'children'),
+    Output('resultado-texto', 'style'),
     Input('btn-predecir', 'n_clicks'),
     State('input-edad', 'value'),
     State('input-genero', 'value'),
@@ -335,71 +410,57 @@ app.layout = html.Div([
     State('input-glucosa', 'value'),
     State('input-fuma', 'value'),
     State('input-alcohol', 'value'),
-    State('input-activo', 'value')
+    State('input-activo', 'value'),
+    prevent_initial_call=True,
 )
-def predecir(n_clicks, edad, genero, altura, peso, ap_hi, ap_lo, 
+def predecir(n_clicks, edad, genero, altura, peso, ap_hi, ap_lo,
              colesterol, glucosa, fuma, alcohol, activo):
-    
-    if n_clicks == 0:
-        return "Ingresa los datos y presiona 'Predecir Riesgo Cardiovascular'", {
-            'textAlign': 'center',
-            'fontSize': '20px',
-            'color': '#7f8c8d',
-            'padding': '20px'
-        }
-    
-    # Verificar que el modelo existe
+
+    texto_base_style = {'textAlign': 'center', 'fontSize': '16px', 'padding': '10px 6px'}
+
     if modelo_clasificacion is None:
-        return "⚠️ Modelo no disponible. Entrena y guarda el modelo primero.", {
-            'textAlign': 'center',
-            'fontSize': '20px',
-            'color': '#e67e22',
-            'background': '#fef9e7',
-            'padding': '20px',
-            'borderRadius': '10px'
-        }
-    
+        return (
+            grafico_vacio("Modelo no disponible"),
+            "⚠️ No se encontró el modelo en 'models/clasificador_cardio.pkl'. Entrénalo y guárdalo primero.",
+            {**texto_base_style, 'color': '#e67e22', 'fontWeight': 600}
+        )
+
     try:
-        # Crear array con los datos en el MISMO orden del entrenamiento
-        # ORDEN: age, gender, height, weight, ap_hi, ap_lo, cholesterol, gluc, smoke, alco, active
         datos = [[edad, genero, altura, peso, ap_hi, ap_lo, colesterol, glucosa, fuma, alcohol, activo]]
-        
-        prediccion = modelo_clasificacion.predict(datos)[0]
-        
-        if prediccion == 0:
-            return "✅ Paciente con BAJO riesgo cardiovascular", {
-                'textAlign': 'center',
-                'fontSize': '24px',
-                'fontWeight': 'bold',
-                'color': '#27ae60',
-                'background': '#d5f5e3',
-                'padding': '20px',
-                'borderRadius': '10px'
-            }
+
+        if hasattr(modelo_clasificacion, "predict_proba"):
+            proba = modelo_clasificacion.predict_proba(datos)[0]
+            prob_riesgo = float(proba[1]) * 100
         else:
-            return "⚠️ Paciente con ALTO riesgo cardiovascular", {
-                'textAlign': 'center',
-                'fontSize': '24px',
-                'fontWeight': 'bold',
-                'color': '#c0392b',
-                'background': '#fadbd8',
-                'padding': '20px',
-                'borderRadius': '10px'
-            }
+            pred = modelo_clasificacion.predict(datos)[0]
+            prob_riesgo = 85.0 if pred == 1 else 15.0
+
+        es_riesgo = prob_riesgo >= 50
+
+        if es_riesgo:
+            mensaje = f"⚠️ Riesgo ALTO estimado: {prob_riesgo:.1f}%"
+            color = COLORS['riesgo']
+        else:
+            mensaje = f"✅ Riesgo BAJO estimado: {prob_riesgo:.1f}%"
+            color = COLORS['sano']
+
+        return (
+            grafico_gauge(prob_riesgo, es_riesgo),
+            mensaje,
+            {**texto_base_style, 'color': color, 'fontWeight': 700, 'fontSize': '19px'}
+        )
+
     except Exception as e:
-        return f"❌ Error en la predicción: {str(e)}", {
-            'textAlign': 'center',
-            'fontSize': '20px',
-            'color': '#c0392b',
-            'background': '#fadbd8',
-            'padding': '20px',
-            'borderRadius': '10px'
-        }
+        return (
+            grafico_vacio("Error"),
+            f"❌ Error en la predicción: {str(e)}",
+            {**texto_base_style, 'color': COLORS['riesgo'], 'fontWeight': 600}
+        )
+
 
 # ============================================
-# 6. EJECUTAR
+# 8. EJECUTAR
 # ============================================
 
 if __name__ == '__main__':
     app.run(debug=True)
-
