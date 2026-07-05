@@ -223,7 +223,7 @@ app = dash.Dash(
 app.title = "Predictor Cardiovascular"
 server = app.server
 
-app.index_string = '''
+_index_template = '''
 <!DOCTYPE html>
 <html>
     <head>
@@ -232,30 +232,37 @@ app.index_string = '''
         {%favicon%}
         {%css%}
         <style>
-            body { font-family: 'Inter', sans-serif; background-color: %s; margin: 0; }
+            body { font-family: 'Inter', sans-serif; background-color: __BG__; margin: 0; }
             ::-webkit-scrollbar { width: 8px; }
             ::-webkit-scrollbar-thumb { background: #c1c9d6; border-radius: 8px; }
             .tab-container .tab {
                 border: none !important;
                 font-weight: 600 !important;
-                color: %s !important;
+                color: __MUTED__ !important;
             }
             .tab-container .tab--selected {
-                border-bottom: 3px solid %s !important;
-                color: %s !important;
+                border-bottom: 3px solid __PRIMARY__ !important;
+                color: __PRIMARY__ !important;
             }
         </style>
     </head>
     <body>
-        {%%app_entry%%}
+        {%app_entry%}
         <footer>
-            {%%config%%}
-            {%%scripts%%}
-            {%%renderer%%}
+            {%config%}
+            {%scripts%}
+            {%renderer%}
         </footer>
     </body>
 </html>
-''' % (COLORS['bg'], COLORS['muted'], COLORS['primary'], COLORS['primary'])
+'''
+
+app.index_string = (
+    _index_template
+    .replace('__BG__', COLORS['bg'])
+    .replace('__MUTED__', COLORS['muted'])
+    .replace('__PRIMARY__', COLORS['primary'])
+)
 
 # ---------- HEADER ----------
 header = html.Div([
@@ -464,3 +471,4 @@ def predecir(n_clicks, edad, genero, altura, peso, ap_hi, ap_lo,
 
 if __name__ == '__main__':
     app.run(debug=True)
+   
