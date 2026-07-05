@@ -2,6 +2,11 @@ dash==2.18.2
 plotly==5.24.1
 pandas==2.2.3
 numpy==2.2.3
-scikit-learn==1.6.1
 joblib==1.4.2
 gunicorn==23.0.0
+scikit-learn==1.6.1
+scipy==1.18.0
+geopandas==0.14.4          
+shapely==2.0.6             
+fiona==1.10.1               
+pyproj==3.7.1            
