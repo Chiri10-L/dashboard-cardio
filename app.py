@@ -3,74 +3,45 @@ from dash import dcc, html, Input, Output, State
 import plotly.express as px
 import plotly.figure_factory as ff
 import pandas as pd
-import geopandas as gpd
-import unicodedata
+import joblib
 import os
 import random
 
 # ============================================
-# 1. CREAR DATOS DEL INEC (SI NO EXISTEN)
+# 1. CREAR CARPETAS Y DATOS
 # ============================================
 
 os.makedirs('data', exist_ok=True)
-
-if not os.path.exists('data/datos_inec_ingresos_distritos_limpio.csv'):
-    distritos = [
-        'Panama', 'San Miguelito', 'Arraijan', 'La Chorrera', 'Capira',
-        'Chame', 'San Carlos', 'Chepo', 'Chiman', 'Taboga',
-        'Balboa', 'Chiriqui Grande', 'David', 'Dolega', 'Gualaca',
-        'Bugaba', 'Boqueron', 'Alanje', 'Baru', 'Potrerillos',
-        'Guaymi', 'Boquete', 'Alto Caballero', 'Tierras Altas',
-        'Aguadulce', 'Anton', 'La Pintada', 'Nata', 'Ola',
-        'Penonome', 'Cocle', 'Chitre', 'Las Minas', 'Los Pozos',
-        'Macaracas', 'Pese', 'Guarare', 'Las Tablas', 'Pedasi',
-        'Pocri', 'Los Santos', 'Tonosi', 'Colon', 'Chagres',
-        'Donoso', 'Portobelo', 'Santa Isabel', 'Omar Torrijos',
-        'Chepigana', 'Pinogana', 'Garachine', 'Sambu', 'Cemaco'
-    ]
-    random.seed(42)
-    valores = [round(random.uniform(300, 1200), 2) for _ in distritos]
-    df_inec = pd.DataFrame({'Nombre Distrito': distritos, 'Valor': valores})
-    df_inec.to_csv('data/datos_inec_ingresos_distritos_limpio.csv', index=False)
+os.makedirs('models', exist_ok=True)
 
 # ============================================
-# 2. CARGAR DATOS
+# 2. CARGAR DATOS CARDIOVASCULARES
 # ============================================
 
-# Datos cardiovasculares
 df = pd.read_csv('data/cardio_train.csv', sep=';')
+
+# Limpieza de datos (igual que en tu notebook)
 df['age'] = (df['age'] / 365.25).astype(int)
 df = df[(df['ap_hi'] > df['ap_lo']) & (df['ap_hi'] < 250) & (df['ap_hi'] > 60)]
 df = df[(df['ap_lo'] < 150) & (df['ap_lo'] > 40)]
 df = df[(df['height'] >= 100) & (df['height'] <= 200)]
 df = df[(df['weight'] >= 40) & (df['weight'] <= 200)]
 
-# Datos INEC
-df_inec = pd.read_csv('data/datos_inec_ingresos_distritos_limpio.csv')
-
-# Cargar mapa (si existe)
-try:
-    gdf_mapa = gpd.read_file('zip://data/geoBoundaries-PAN-ADM2-all.zip')
-    
-    # Normalizar nombres
-    def normalizar_nombre(texto):
-        if isinstance(texto, str):
-            texto = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('utf-8')
-            return texto.upper().strip()
-        return texto
-    
-    gdf_mapa['distrito_mapa'] = gdf_mapa['shapeName'].apply(normalizar_nombre)
-    df_inec['distrito_inec'] = df_inec['Nombre Distrito'].apply(normalizar_nombre)
-    
-    # Unir datos
-    gdf_merged = gdf_mapa.merge(df_inec, left_on='distrito_mapa', right_on='distrito_inec', how='left')
-    mapa_disponible = True
-except:
-    mapa_disponible = False
-    print("⚠️ Mapa no disponible")
+print("✅ Datos cargados correctamente")
 
 # ============================================
-# 3. CREAR GRÁFICAS
+# 3. CARGAR MODELOS (si existen)
+# ============================================
+
+try:
+    modelo_clasificacion = joblib.load('models/clasificador_cardio.pkl')
+    print("✅ Modelo de clasificación cargado")
+except:
+    modelo_clasificacion = None
+    print("⚠️ Modelo de clasificación NO encontrado")
+
+# ============================================
+# 4. CREAR GRÁFICAS
 # ============================================
 
 # FIGURA 1: Matriz de Correlación
@@ -131,31 +102,8 @@ fig_presion = px.scatter(
     hover_data=['age', 'weight']
 )
 
-# FIGURA 5: Mapa de Panamá
-if mapa_disponible:
-    fig_mapa = px.choropleth_mapbox(
-        gdf_merged,
-        geojson=gdf_merged.geometry.__geo_interface__,
-        locations=gdf_merged.index,
-        color='Valor',
-        hover_name='distrito_mapa',
-        hover_data={'Valor': ':.2f'},
-        title='🗺️ Ingreso Promedio Mensual por Distrito en Panamá (INEC 2023)',
-        mapbox_style='carto-positron',
-        center={"lat": 8.5, "lon": -80.2},
-        zoom=5.5,
-        color_continuous_scale='YlOrRd',
-        labels={'Valor': 'Ingreso Promedio (USD)'}
-    )
-    fig_mapa.update_layout(
-        margin={"r": 0, "t": 30, "l": 0, "b": 0},
-        height=650
-    )
-else:
-    fig_mapa = None
-
 # ============================================
-# 4. DASHBOARD
+# 5. DASHBOARD
 # ============================================
 
 app = dash.Dash(__name__)
@@ -169,16 +117,12 @@ app.layout = html.Div([
         style={'textAlign': 'center', 'color': '#2c3e50', 'padding': '20px', 'marginBottom': '30px'}
     ),
     
-    # =========================================
     # FILA 1: Matriz de Correlación
-    # =========================================
     html.Div([
         dcc.Graph(figure=fig_correlacion)
     ], style={'padding': '10px', 'margin': '20px', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}),
     
-    # =========================================
     # FILA 2: Histogramas (2 columnas)
-    # =========================================
     html.Div([
         html.Div([
             dcc.Graph(figure=fig_edad)
@@ -189,28 +133,15 @@ app.layout = html.Div([
         ], style={'width': '48%', 'display': 'inline-block', 'padding': '10px'}),
     ], style={'display': 'flex', 'justifyContent': 'space-around'}),
     
-    # =========================================
     # FILA 3: Gráfico de Dispersión
-    # =========================================
     html.Div([
         dcc.Graph(figure=fig_presion)
     ], style={'padding': '10px', 'margin': '20px', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}),
     
-    # =========================================
-    # FILA 4: Mapa de Panamá
-    # =========================================
-    html.Div([
-        dcc.Graph(figure=fig_mapa) if fig_mapa else html.H3("🗺️ Mapa no disponible", style={'textAlign': 'center'})
-    ], style={'padding': '10px', 'margin': '20px', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}),
-    
-    # =========================================
     # SEPARADOR
-    # =========================================
     html.Hr(style={'margin': '40px 0'}),
     
-    # =========================================
     # CONTROLADOR DE PREDICCIÓN
-    # =========================================
     html.H2(
         "🔮 Predicción de Riesgo Cardiovascular",
         style={'textAlign': 'center', 'color': '#2c3e50'}
@@ -361,11 +292,9 @@ app.layout = html.Div([
         id='resultado-prediccion',
         style={
             'textAlign': 'center',
-            'fontSize': '24px',
-            'fontWeight': 'bold',
-            'margin': '20px',
-            'padding': '20px',
-            'borderRadius': '10px'
+            'fontSize': '20px',
+            'color': '#7f8c8d',
+            'padding': '20px'
         },
         children="Ingresa los datos y presiona 'Predecir Riesgo Cardiovascular'"
     ),
@@ -380,7 +309,7 @@ app.layout = html.Div([
 ], style={'maxWidth': '1400px', 'margin': '0 auto', 'padding': '20px'})
 
 # ============================================
-# 5. CALLBACK - PREDICCIÓN
+# 6. CALLBACK - PREDICCIÓN
 # ============================================
 
 @app.callback(
@@ -410,24 +339,58 @@ def predecir(n_clicks, edad, genero, altura, peso, ap_hi, ap_lo,
             'padding': '20px'
         }
     
-    # Aquí iría la predicción con el modelo
-    # Por ahora, mostramos un ejemplo
-    resultado = "✅ Paciente con BAJO riesgo cardiovascular"
-    estilo = {
-        'textAlign': 'center',
-        'fontSize': '24px',
-        'fontWeight': 'bold',
-        'color': '#27ae60',
-        'background': '#d5f5e3',
-        'padding': '20px',
-        'borderRadius': '10px'
-    }
+    # Verificar que el modelo existe
+    if modelo_clasificacion is None:
+        return "⚠️ Modelo no disponible. Entrena y guarda el modelo primero.", {
+            'textAlign': 'center',
+            'fontSize': '20px',
+            'color': '#e67e22',
+            'background': '#fef9e7',
+            'padding': '20px',
+            'borderRadius': '10px'
+        }
     
-    return resultado, estilo
+    try:
+        # Crear array con los datos en el MISMO orden del entrenamiento
+        # ORDEN: age, gender, height, weight, ap_hi, ap_lo, cholesterol, gluc, smoke, alco, active
+        datos = [[edad, genero, altura, peso, ap_hi, ap_lo, colesterol, glucosa, fuma, alcohol, activo]]
+        
+        prediccion = modelo_clasificacion.predict(datos)[0]
+        
+        if prediccion == 0:
+            return "✅ Paciente con BAJO riesgo cardiovascular", {
+                'textAlign': 'center',
+                'fontSize': '24px',
+                'fontWeight': 'bold',
+                'color': '#27ae60',
+                'background': '#d5f5e3',
+                'padding': '20px',
+                'borderRadius': '10px'
+            }
+        else:
+            return "⚠️ Paciente con ALTO riesgo cardiovascular", {
+                'textAlign': 'center',
+                'fontSize': '24px',
+                'fontWeight': 'bold',
+                'color': '#c0392b',
+                'background': '#fadbd8',
+                'padding': '20px',
+                'borderRadius': '10px'
+            }
+    except Exception as e:
+        return f"❌ Error en la predicción: {str(e)}", {
+            'textAlign': 'center',
+            'fontSize': '20px',
+            'color': '#c0392b',
+            'background': '#fadbd8',
+            'padding': '20px',
+            'borderRadius': '10px'
+        }
 
 # ============================================
-# 6. EJECUTAR
+# 7. EJECUTAR
 # ============================================
 
 if __name__ == '__main__':
     app.run(debug=True)
+
