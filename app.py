@@ -9,41 +9,53 @@ import json
 import os
 
 # ============================================
-# 1. DATOS EMBEBIDOS (CREADOS EN EL CÓDIGO)
+# 1. DATOS PARA LAS GRÁFICAS DE ANÁLISIS
 # ============================================
+# Si existe data/cardio_clean.csv (generado por entrenar_modelos.py con el
+# dataset real), se usa ese. Si no, se usa una muestra sintética de respaldo
+# para que el dashboard nunca se rompa por falta de datos.
 
-print("📊 Creando datos de ejemplo...")
+RUTA_DATOS_REALES = 'data/cardio_clean.csv'
 
-data = {
-    'id': list(range(100)),
-    'age': [50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
-            49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
-            50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
-            49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
-            50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
-            49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
-            50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
-            49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
-            50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
-            49, 56, 44, 61, 42, 57, 46, 59, 54, 43],
-    'gender': [2, 1, 1, 2, 1, 2, 1, 2, 1, 2] * 10,
-    'height': [168, 156, 165, 169, 156, 160, 170, 155, 175, 165] * 10,
-    'weight': [62, 85, 64, 82, 56, 70, 80, 55, 90, 65] * 10,
-    'ap_hi': [110, 140, 130, 150, 100, 120, 130, 110, 140, 120] * 10,
-    'ap_lo': [80, 90, 70, 100, 60, 80, 85, 70, 90, 80] * 10,
-    'cholesterol': [1, 3, 3, 1, 1, 2, 3, 1, 2, 1] * 10,
-    'gluc': [1, 1, 1, 1, 1, 2, 1, 1, 2, 1] * 10,
-    'smoke': [0, 0, 0, 0, 0, 1, 0, 0, 1, 0] * 10,
-    'alco': [0, 0, 0, 0, 0, 1, 0, 0, 0, 0] * 10,
-    'active': [1, 1, 0, 1, 0, 1, 0, 1, 1, 0] * 10,
-    'cardio': [0, 1, 1, 1, 0, 1, 0, 0, 1, 0] * 10
-}
-
-df = pd.DataFrame(data)
-print("✅ Datos de ejemplo creados correctamente")
+if os.path.exists(RUTA_DATOS_REALES):
+    print("📊 Cargando dataset real (data/cardio_clean.csv)...")
+    df = pd.read_csv(RUTA_DATOS_REALES)
+    # Quitar las unidades de los nombres de columna para mantener el resto del código igual
+    df = df.rename(columns={
+        'height(cm)': 'height', 'weight(kg)': 'weight',
+        'ap_hi(mmHg)': 'ap_hi', 'ap_lo(mmHg)': 'ap_lo'
+    })
+    print(f"✅ Dataset real cargado ({len(df)} pacientes)")
+else:
+    print("⚠️ data/cardio_clean.csv no encontrado — usando datos de ejemplo (sintéticos)")
+    data = {
+        'id': list(range(100)),
+        'age': [50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+                49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
+                50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+                49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
+                50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+                49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
+                50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+                49, 56, 44, 61, 42, 57, 46, 59, 54, 43,
+                50, 55, 51, 48, 47, 52, 60, 45, 58, 53,
+                49, 56, 44, 61, 42, 57, 46, 59, 54, 43],
+        'gender': [2, 1, 1, 2, 1, 2, 1, 2, 1, 2] * 10,
+        'height': [168, 156, 165, 169, 156, 160, 170, 155, 175, 165] * 10,
+        'weight': [62, 85, 64, 82, 56, 70, 80, 55, 90, 65] * 10,
+        'ap_hi': [110, 140, 130, 150, 100, 120, 130, 110, 140, 120] * 10,
+        'ap_lo': [80, 90, 70, 100, 60, 80, 85, 70, 90, 80] * 10,
+        'cholesterol': [1, 3, 3, 1, 1, 2, 3, 1, 2, 1] * 10,
+        'gluc': [1, 1, 1, 1, 1, 2, 1, 1, 2, 1] * 10,
+        'smoke': [0, 0, 0, 0, 0, 1, 0, 0, 1, 0] * 10,
+        'alco': [0, 0, 0, 0, 0, 1, 0, 0, 0, 0] * 10,
+        'active': [1, 1, 0, 1, 0, 1, 0, 1, 1, 0] * 10,
+        'cardio': [0, 1, 1, 1, 0, 1, 0, 0, 1, 0] * 10
+    }
+    df = pd.DataFrame(data)
 
 # ============================================
-# 2. CARGAR MODELO (si existe)
+# 2. CARGAR MODELOS (si existen)
 # ============================================
 
 try:
@@ -53,6 +65,15 @@ except Exception:
     modelo_clasificacion = None
     print("⚠️ Modelo de clasificación NO encontrado")
 
+# El escalador del clasificador es OPCIONAL: solo existe si el modelo ganador
+# fue SVM o KNN (Random Forest no necesita datos escalados).
+try:
+    scaler_clasificador = joblib.load('models/scaler_clasificador.pkl')
+    print("✅ Escalador del clasificador cargado (el modelo ganador lo requiere)")
+except Exception:
+    scaler_clasificador = None
+    print("ℹ️ Sin escalador de clasificación (normal si el ganador fue Random Forest)")
+
 try:
     modelo_regresion = joblib.load('models/regresor_presion.pkl')
     print("✅ Modelo de regresión cargado")
@@ -61,11 +82,11 @@ except Exception:
     print("⚠️ Modelo de regresión NO encontrado")
 
 try:
-    scaler = joblib.load('models/scaler.pkl')
-    print("✅ Escalador cargado")
+    scaler_regresor = joblib.load('models/scaler_regresor.pkl')
+    print("✅ Escalador de regresión cargado")
 except Exception:
-    scaler = None
-    print("⚠️ Escalador NO encontrado")
+    scaler_regresor = None
+    print("⚠️ Escalador de regresión NO encontrado")
 
 # ============================================
 # 2.1 CARGAR DATOS DEL MAPA DE PANAMÁ
@@ -671,6 +692,10 @@ def predecir(n_clicks, edad, genero, altura, peso, ap_hi, ap_lo,
     try:
         datos = [[edad, genero, altura, peso, ap_hi, ap_lo, colesterol, glucosa, fuma, alcohol, activo]]
 
+        # Si el modelo ganador fue SVM o KNN, necesita los datos escalados
+        if scaler_clasificador is not None:
+            datos = scaler_clasificador.transform(datos)
+
         if hasattr(modelo_clasificacion, "predict_proba"):
             proba = modelo_clasificacion.predict_proba(datos)[0]
             prob_riesgo = float(proba[1]) * 100
@@ -724,8 +749,8 @@ def predecir_presion(n_clicks, edad, genero, altura, peso, ap_lo,
 
     texto_base_style = {'textAlign': 'center', 'fontSize': '16px', 'padding': '10px 6px'}
 
-    if modelo_regresion is None or scaler is None:
-        faltante = "models/regresor_presion.pkl" if modelo_regresion is None else "models/scaler.pkl"
+    if modelo_regresion is None or scaler_regresor is None:
+        faltante = "models/regresor_presion.pkl" if modelo_regresion is None else "models/scaler_regresor.pkl"
         return (
             grafico_vacio_presion("Modelo no disponible"),
             f"⚠️ No se encontró '{faltante}'. Genera y guarda ese archivo primero.",
@@ -736,7 +761,7 @@ def predecir_presion(n_clicks, edad, genero, altura, peso, ap_lo,
         # Mismo orden de variables usado al entrenar el MLP Regressor en el notebook:
         # age, gender, height, weight, ap_lo, cholesterol, gluc, smoke, alco, active, cardio
         datos = [[edad, genero, altura, peso, ap_lo, colesterol, glucosa, fuma, alcohol, activo, cardio]]
-        datos_escalados = scaler.transform(datos)
+        datos_escalados = scaler_regresor.transform(datos)
 
         valor_predicho = float(modelo_regresion.predict(datos_escalados)[0])
         categoria, color = clasificar_presion(valor_predicho)
@@ -763,3 +788,5 @@ def predecir_presion(n_clicks, edad, genero, altura, peso, ap_lo,
 
 if __name__ == '__main__':
     app.run(debug=True)
+ 
+
