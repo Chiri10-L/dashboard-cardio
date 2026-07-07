@@ -1,4 +1,5 @@
 import json
+import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -27,6 +28,12 @@ except Exception as e:
     panama_geojson = None
     df_panama = None
     print(f"⚠️ Datos del mapa de Panamá NO encontrados: {e}")
+    print(f"📂 Directorio actual (cwd): {os.getcwd()}")
+    print(f"📂 Archivos/carpetas en la raíz: {os.listdir('.')}")
+    if os.path.isdir('data'):
+        print(f"📂 Contenido de la carpeta 'data/': {os.listdir('data')}")
+    else:
+        print("📂 La carpeta 'data/' NO existe en este directorio")
 
 
 # ============================================
